@@ -1,1 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a101a">
+  <meta name="description" content="Animate transparent PNGs and export self-contained Lottie JSON files, right in your browser.">
+  <title>Lottie Animator — Image to Motion</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0a101a;--panel:#111927;--panel2:#151f2e;--line:#293448;--text:#eff5ff;--muted:#9baec5;--blue:#4f94ff;--blue2:#74b5ff;--radius:18px;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 65% -25%,#182a49 0%,transparent 44%),var(--bg);color:var(--text);font-size:14px}
+    button,input,select{font:inherit}button{cursor:pointer}
+    button:focus-visible,input:focus-visible,select:focus-visible,label:focus-visible{outline:2px solid var(--blue2);outline-offset:3px}
+    .topbar{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px clamp(18px,3vw,42px);border-bottom:1px solid #223149;background:#0b121df0}
+    .identity{display:flex;align-items:center;gap:13px;min-width:0}
+    .brandmark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #558bd475;border-radius:13px;background:linear-gradient(140deg,#243f64,#14223b);font-size:26px;color:#b4d4ff;box-shadow:inset 0 0 16px #4a8bff17}
+    .brandtitle{font-weight:780;font-size:16px;letter-spacing:-.4px}
+    .brandsub{margin-top:2px;color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+    .headeractions{display:flex;align-items:center;gap:12px}
+    .privacy{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;white-space:nowrap}
+    .privacy::before{content:"";width:7px;height:7px;background:#58dba8;border-radius:50%;box-shadow:0 0 12px #58dba86b}
+    .primary{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:43px;padding:0 19px;border:1px solid #80b6ff5c;border-radius:11px;color:#fff;background:linear-gradient(145deg,#438df2,#3269dc);font-weight:720;white-space:nowrap;box-shadow:0 8px 30px #296bd02a;transition:filter .16s,transform .16s}
+    .primary:not(:disabled):hover{filter:brightness(1.13);transform:translateY(-1px)}.primary:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+    .workspace{display:grid;grid-template-columns:minmax(290px,342px) minmax(0,1fr);max-width:1650px;margin:0 auto;min-height:calc(100dvh - 77px)}
+    .sidebar{padding:25px 22px 32px clamp(18px,3vw,36px);border-right:1px solid #273144;background:#0d1420a3}
+    .side-section{padding-bottom:25px;margin-bottom:23px;border-bottom:1px solid #263247}.side-section:last-child{border:0;margin-bottom:0;padding-bottom:0}
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}
+    .section-title{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.125em;color:#cad8ed;font-weight:780}
+    .pill{border:1px solid #2f496c;color:#89b9ff;background:#1b2c43;border-radius:20px;font-size:10px;padding:4px 8px}
+    .uploadzone{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:152px;padding:22px 14px;border:1.5px dashed #506785;border-radius:15px;background:linear-gradient(150deg,#1c2a4033,#14213777);text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
+    .uploadzone:hover,.uploadzone.dragging{background:#2441665c;border-color:#7fb1ff}
+    .uploadsymbol{display:grid;place-items:center;width:39px;height:39px;margin-bottom:10px;border-radius:12px;background:#244366;color:#b7d5ff;font-size:27px;line-height:1}
+    .uploadzone strong{font-size:13px}.uploadzone small{display:block;margin-top:7px;color:var(--muted);line-height:1.45}
+    .asset-info{display:none;align-items:center;gap:10px;min-width:0;margin-top:13px;padding:10px 11px;border-radius:11px;background:#18253a;border:1px solid #293d5a}
+    .asset-info.visible{display:flex}
+    .asset-icon{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:9px;color:#8cbdff;background:#263c59;font-size:18px}
+    .asset-text{min-width:0;flex:1}.asset-text strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.asset-text span{display:block;margin-top:3px;color:var(--muted);font-size:11px}
+    .subtle-link{background:none;border:0;color:#87b8ff;padding:7px 0 0;font-size:12px;font-weight:600}
+    .subtle-link:hover{text-decoration:underline}
+    .preset-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .preset{display:flex;align-items:center;gap:9px;text-align:left;padding:11px 10px;min-height:55px;background:#151f2d;border:1px solid #2d3a4e;color:#dce8f8;border-radius:12px;transition:background .16s,border-color .16s}
+    .preset:hover{background:#213149}.preset.active{background:#1c3554;border-color:#5b9df8;box-shadow:inset 0 0 0 1px #5a91d733}
+    .preset-icon{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;background:#26374c;color:#9dc8ff;font-size:22px;line-height:1}
+    .preset.active .preset-icon{background:#2e527f}.preset-name{font-size:12px;font-weight:690;line-height:1.2}
+    .description{min-height:35px;margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+    .control{margin-top:17px}.control:first-of-type{margin-top:0}
+    .control-label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+    .control-label label,.control-label span:first-child{font-weight:610;color:#d5e2f4;font-size:12px}
+    .control-label output,.control-label small{color:var(--muted);font-size:12px}
+    .input-row{display:flex;align-items:center;gap:10px}
+    input[type="range"]{width:100%;height:5px;margin:6px 0;cursor:pointer;accent-color:#64a4ff}
+    .number{width:84px;min-width:0;border:1px solid #35435b;border-radius:9px;padding:10px 9px;background:#152034;color:#f4f8ff;text-align:right}
+    .number.small{width:77px}
+    .unit{font-size:12px;color:var(--muted);min-width:22px}
+    .input-row .number{margin-left:auto}
+    .select{width:100%;height:40px;background:#152034;border:1px solid #35435b;color:var(--text);border-radius:9px;padding:0 10px}
+    .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .field label{display:block;color:#d1deef;font-size:12px;margin-bottom:8px}
+    .field .number{width:100%;text-align:left}
+    .info-note{display:flex;gap:8px;margin:19px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+    .info-note span:first-child{color:#85bdff}
+    .main{min-width:0;padding:35px clamp(19px,4.4vw,68px) 32px}
+    .intro{margin:0 auto 22px;max-width:990px}
+    .eyebrow{color:#8dbdff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;margin-bottom:9px}
+    h1{font-size:clamp(25px,3.4vw,38px);letter-spacing:-.055em;line-height:1.18;margin:0;font-weight:780}
+    .lead{color:var(--muted);font-size:13px;line-height:1.65;margin:9px 0 0}
+    .studio{max-width:990px;margin:0 auto;overflow:hidden;border:1px solid #2b3850;border-radius:20px;background:linear-gradient(135deg,#141e2f,#101827);box-shadow:0 20px 85px #02050d4a}
+    .studio-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 19px;border-bottom:1px solid #29344a}
+    .studio-head strong{font-size:13px}.studio-head .hint{color:var(--muted);font-size:11px;letter-spacing:.04em}
+    .live{display:inline-flex;align-items:center;gap:8px;color:#b2c8e3;font-size:12px}
+    .live-dot{width:7px;height:7px;border-radius:50%;background:#67b3ff;box-shadow:0 0 11px #61a8ff75}
+    .stage-wrap{display:flex;justify-content:center;align-items:center;min-height:320px;padding:25px;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#20334c70,transparent 60%)}
+    .stage{position:relative;display:grid;place-items:center;width:min(100%,520px);max-height:min(62vh,600px);aspect-ratio:1/1;overflow:hidden;box-shadow:0 18px 55px #0007,0 0 0 1px #8d9fb324;background-color:#1e2938;background-image:linear-gradient(45deg,#2b3849 25%,transparent 25%),linear-gradient(-45deg,#2b3849 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2b3849 75%),linear-gradient(-45deg,transparent 75%,#2b3849 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}
+    .stage canvas{display:block;width:100%;height:100%;object-fit:fill}
+    .stage-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center;pointer-events:none;background:#111e2a55}
+    .placeholder-art{display:grid;place-items:center;width:92px;height:92px;border:2px solid #5688ba80;border-radius:24px;color:#a6d1ff;font-size:50px;background:#18324bcc;box-shadow:0 0 45px #559aff22}
+    .stage-placeholder strong{margin-top:19px;font-size:16px}.stage-placeholder span{margin-top:8px;color:#b2c6df;font-size:12px}
+    .stage-caption{padding:11px 20px 17px;text-align:center;color:#8d9eb6;font-size:11px;line-height:1.5}
+    .timeline{padding:19px 20px 20px;border-top:1px solid #29364b;background:#101827}
+    .timeline-top{display:flex;justify-content:space-between;align-items:center;gap:14px}
+    .playbtn{display:flex;align-items:center;justify-content:center;gap:9px;min-width:97px;min-height:39px;border-radius:10px;background:#233b5d;border:1px solid #4973a5;color:#f2f7ff;font-weight:720}
+    .playbtn:hover{background:#305078}
+    .timecode{font-variant-numeric:tabular-nums;font-size:12px;letter-spacing:.02em;color:#a8b9d0}
+    .timecode strong{color:#f1f6ff}
+    #scrubber{margin:21px 0 8px;width:100%;height:6px;display:block}
+    .ruler{display:flex;justify-content:space-between;color:#8295ae;font-size:11px}
+    .ruler .phase{display:flex;align-items:center;gap:6px}
+    .phase i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#6b9ee7}
+    .details{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:11px;max-width:990px;margin:18px auto 0;color:#8ea2bd;font-size:12px}
+    .details>div{display:flex;align-items:center;gap:8px}
+    .details b{color:#c6d8f0;font-weight:650}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,12px);padding:13px 18px;border:1px solid #4484ba;border-radius:11px;background:#1b344e;color:#f2f7ff;box-shadow:0 12px 35px #0008;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:10;font-size:13px}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    [hidden]{display:none!important}
+    @media(max-width:1000px){.workspace{grid-template-columns:minmax(270px,310px) minmax(0,1fr)}.main{padding:30px 24px}.sidebar{padding:24px 18px}.stage-wrap{min-height:250px}}
+    @media(max-width:760px){.topbar{padding:14px 16px}.privacy{display:none}.workspace{display:flex;flex-direction:column}.main{order:0;padding:24px 16px}.sidebar{order:1;border:0;border-top:1px solid #2b394d;padding:23px 18px 40px}.intro{margin-bottom:20px}.stage-wrap{min-height:230px;padding:16px}.stage{width:min(100%,440px);max-height:56vh}.studio-head{padding:12px 15px}.timeline{padding:14px 15px 18px}.preset-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.preset{flex-direction:column;justify-content:center;padding:10px 5px;text-align:center;gap:6px}.preset-name{font-size:11px}.description{min-height:0}.side-section{max-width:700px;margin-left:auto;margin-right:auto}.details{font-size:11px}}
+    @media(max-width:450px){.brandtitle{font-size:14px}.brandsub{font-size:9px}.brandmark{width:37px;height:37px}.primary{min-height:39px;padding:0 12px;font-size:12px}.topbar{gap:8px}.preset-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.preset{flex-direction:row;text-align:left;padding:11px 10px}.intro h1{font-size:27px}.stage-caption{padding:10px 14px 14px}.ruler .phase{font-size:10px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="identity">
+      <div class="brandmark" aria-hidden="true">↻</div>
+      <div><div class="brandtitle">Lottie Animator</div><div class="brandsub">Image → motion studio</div></div>
+    </div>
+    <div class="headeractions">
+      <span class="privacy">Local browser processing</span>
+      <button class="primary" id="exportButton" type="button" disabled aria-label="Download Lottie JSON">↓ &nbsp;Export Lottie</button>
+    </div>
+  </header>
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Animation controls">
+      <section class="side-section">
+        <div class="section-header"><h2 class="section-title">01 · Your image</h2><span class="pill">PNG alpha safe</span></div>
+        <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <label class="uploadzone" id="uploadzone" for="fileInput" tabindex="0">
+          <span class="uploadsymbol" aria-hidden="true">↑</span>
+          <strong>Choose an image or drop it here</strong>
+          <small>PNG, JPG, or WebP · up to 25 MB<br>Transparency is kept when exported</small>
+        </label>
+        <div id="assetInfo" class="asset-info" aria-live="polite">
+          <span class="asset-icon" aria-hidden="true">▧</span>
+          <div class="asset-text"><strong id="assetName"></strong><span id="assetMeta"></span></div>
+        </div>
+        <button class="subtle-link" id="demoButton" type="button">Try with demo artwork →</button>
+      </section>
 
+      <section class="side-section">
+        <div class="section-header"><h2 class="section-title">02 · Animation style</h2><span class="pill">8 presets</span></div>
+        <div class="preset-grid" id="presets" role="group" aria-label="Animation preset">
+          <button class="preset active" type="button" data-preset="spin" aria-pressed="true"><span class="preset-icon" aria-hidden="true">↻</span><span class="preset-name">Speed-ramp spin</span></button>
+          <button class="preset" type="button" data-preset="float" aria-pressed="false"><span class="preset-icon" aria-hidden="true">↕</span><span class="preset-name">Float</span></button>
+          <button class="preset" type="button" data-preset="pulse" aria-pressed="false"><span class="preset-icon" aria-hidden="true">◎</span><span class="preset-name">Pulse</span></button>
+          <button class="preset" type="button" data-preset="sway" aria-pressed="false"><span class="preset-icon" aria-hidden="true">⤺</span><span class="preset-name">Sway</span></button>
+          <button class="preset" type="button" data-preset="bounce" aria-pressed="false"><span class="preset-icon" aria-hidden="true">⌃</span><span class="preset-name">Bounce</span></button>
+          <button class="preset" type="button" data-preset="slide" aria-pressed="false"><span class="preset-icon" aria-hidden="true">⇆</span><span class="preset-name">Slide</span></button>
+          <button class="preset" type="button" data-preset="fade" aria-pressed="false"><span class="preset-icon" aria-hidden="true">◐</span><span class="preset-name">Fade</span></button>
+          <button class="preset" type="button" data-preset="pop" aria-pressed="false"><span class="preset-icon" aria-hidden="true">✧</span><span class="preset-name">Pop</span></button>
+        </div>
+        <p class="description" id="presetDescription">Starts still, accelerates through three full rotations, eases into a stop, then holds.</p>
+        <div class="control" id="spinControls">
+          <div class="control-label"><label for="rotations">Full rotations</label><output id="rotationsValue">3</output></div>
+          <input type="range" id="rotations" min="1" max="8" step="1" value="3">
+          <div class="control" style="margin-top:12px"><div class="control-label"><label for="direction">Direction</label></div><select class="select" id="direction"><option value="1">Clockwise ↻</option><option value="-1">Counterclockwise ↺</option></select></div>
+        </div>
+        <div class="control" id="intensityControls" hidden>
+          <div class="control-label"><label for="intensity">Intensity</label><output id="intensityValue">100%</output></div>
+          <input type="range" id="intensity" min="20" max="200" step="5" value="100">
+        </div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-header"><h2 class="section-title">03 · Timing</h2><span class="pill" id="totalDuration">4.40 s total</span></div>
+        <div class="control">
+          <div class="control-label"><label for="holdBefore">Hold before</label><small>still at start</small></div>
+          <div class="input-row"><input id="holdBefore" class="number" type="number" value="2" min="0" max="20" step="0.1"><span class="unit">sec</span></div>
+        </div>
+        <div class="control">
+          <div class="control-label"><label for="motionDuration">Animation duration</label><small>movement</small></div>
+          <div class="input-row"><input id="motionDuration" class="number" type="number" value="1.4" min="0.3" max="20" step="0.1"><span class="unit">sec</span></div>
+        </div>
+        <div class="control">
+          <div class="control-label"><label for="holdAfter">Hold after</label><small>still at end</small></div>
+          <div class="input-row"><input id="holdAfter" class="number" type="number" value="1" min="0" max="20" step="0.1"><span class="unit">sec</span></div>
+        </div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-header"><h2 class="section-title">04 · Export settings</h2></div>
+        <div class="settings-grid">
+          <div class="field"><label for="canvasWidth">Width (px)</label><input class="number" id="canvasWidth" type="number" min="128" max="2048" step="1" value="512"></div>
+          <div class="field"><label for="canvasHeight">Height (px)</label><input class="number" id="canvasHeight" type="number" min="128" max="2048" step="1" value="512"></div>
+          <div class="field"><label for="fps">Frame rate</label><select class="select" id="fps"><option value="24">24 fps</option><option value="30">30 fps</option><option value="60" selected>60 fps</option></select></div>
+          <div class="field"><label for="imageScale">Image size</label><select class="select" id="imageScale"><option value="0.6">Small</option><option value="0.76" selected>Balanced</option><option value="0.9">Large</option><option value="1">Full fit</option></select></div>
+        </div>
+        <p class="info-note"><span aria-hidden="true">ⓘ</span><span>Export is standard Lottie <strong>.json</strong> with the PNG embedded. It keeps transparent pixels; the image stays raster, not vector. Looping is controlled by the player that opens the Lottie.</span></p>
+      </section>
+    </aside>
+
+    <main class="main">
+      <div class="intro"><div class="eyebrow">Motion made simple</div><h1>Bring a still image to life.</h1><p class="lead">Upload a transparent PNG, choose how it moves, fine-tune the timing, and download a self-contained Lottie animation.</p></div>
+      <section class="studio" aria-label="Animation preview">
+        <div class="studio-head"><strong>Live preview</strong><div class="live"><span class="live-dot" aria-hidden="true"></span><span id="previewStatus">Waiting for an image</span></div></div>
+        <div class="stage-wrap">
+          <div class="stage" id="stage">
+            <canvas id="previewCanvas" width="512" height="512" role="img" aria-label="Transparent animation preview"></canvas>
+            <div class="stage-placeholder" id="placeholder"><div class="placeholder-art" aria-hidden="true">✦</div><strong>Your animation starts here</strong><span>Upload an image or use the demo artwork</span></div>
+          </div>
+        </div>
+        <div class="stage-caption">The checkerboard is only a transparency guide. It will not appear in your exported Lottie.</div>
+        <div class="timeline">
+          <div class="timeline-top"><button class="playbtn" id="playButton" type="button" disabled>▶ Play</button><div class="timecode"><strong id="currentTime">0.00s</strong> / <span id="endTime">4.40s</span></div></div>
+          <input id="scrubber" type="range" min="0" max="4400" value="0" step="1" aria-label="Scrub animation timeline">
+          <div class="ruler"><span class="phase"><i></i>Hold</span><span class="phase"><i></i>Motion</span><span class="phase"><i></i>Hold</span></div>
+        </div>
+      </section>
+      <div class="details"><div><span aria-hidden="true">✳</span><span><b>No server uploads.</b> Everything happens in this browser.</span></div><div><span aria-hidden="true">◇</span><span>PNG transparency · keyframed motion · JSON export</span></div></div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    (function(){
+      'use strict';
+      var $ = function(id){return document.getElementById(id);};
+      var fileInput = $('fileInput');
+      var uploadzone = $('uploadzone');
+      var stage = $('stage');
+      var canvas = $('previewCanvas');
+      var context = canvas.getContext('2d');
+      var asset = null;
+      var preset = 'spin';
+      var model = null;
+      var elapsed = 0;
+      var playing = false;
+      var startedAt = 0;
+      var frameHandle = null;
+      var toastTimeout = null;
+      var descriptions = {
+        spin:'Starts still, accelerates through full rotations, eases into a stop, then holds.',
+        float:'Glides upward and gently settles back to the original position.',
+        pulse:'Grows softly and shrinks back, like a single heartbeat.',
+        sway:'Rotates to each side and settles gently in the center.',
+        bounce:'Lifts off, drops back, and makes a small settling bounce.',
+        slide:'Glides sideways and returns to its original position.',
+        fade:'Fades down and back to full visibility without a background.',
+        pop:'Squashes, springs outward, and settles at its original size.'
+      };
+      var curves = {
+        ramp:[0.72,0,0.28,1],
+        smooth:[0.42,0,0.58,1],
+        soft:[0.25,0.1,0.25,1],
+        out:[0.16,1,0.3,1],
+        in:[0.65,0,0.9,0.55]
+      };
+      function readNumber(id, fallback, min, max){
+        var n = Number($(id).value);
+        if (!Number.isFinite(n) || $(id).value.trim()==='') n = fallback;
+        return Math.max(min,Math.min(max,n));
+      }
+      function point(u,v,curve){return {u:u,v:v,curve:curve||'smooth'};}
+      function settings(){
+        return {
+          w:Math.round(readNumber('canvasWidth',512,128,2048)),
+          h:Math.round(readNumber('canvasHeight',512,128,2048)),
+          fps:readNumber('fps',60,24,60),
+          before:readNumber('holdBefore',2,0,20),
+          duration:readNumber('motionDuration',1.4,0.3,20),
+          after:readNumber('holdAfter',1,0,20),
+          turns:readNumber('rotations',3,1,8),
+          direction:Number($('direction').value)===-1?-1:1,
+          intensity:readNumber('intensity',100,20,200)/100,
+          size:readNumber('imageScale',0.76,0.6,1)
+        };
+      }
+      function trackFrames(points,beforeFrames,motionFrames){
+        var frames = [];
+        if(beforeFrames>0) frames.push({t:0,v:points[0].v.slice(),hold:true});
+        for(var i=0;i<points.length;i++){
+          var frame = beforeFrames+Math.round(points[i].u*motionFrames);
+          if(frames.length && frames[frames.length-1].t===frame){
+            frames[frames.length-1] = {t:frame,v:points[i].v.slice(),curve:points[i].curve};
+          }else{
+            frames.push({t:frame,v:points[i].v.slice(),curve:points[i].curve});
+          }
+        }
+        return frames;
+      }
+      function buildModel(){
+        var s=settings();
+        var beforeFrames=Math.round(s.before*s.fps);
+        var motionFrames=Math.max(1,Math.round(s.duration*s.fps));
+        var afterFrames=Math.round(s.after*s.fps);
+        var totalFrames=beforeFrames+motionFrames+afterFrames;
+        var center=[s.w/2,s.h/2,0];
+        var fit=asset?Math.min(s.w/asset.w,s.h/asset.h)*s.size*100:100;
+        var defaultScale=[fit,fit,100];
+        var pos=[point(0,center),point(1,center)];
+        var scale=[point(0,defaultScale),point(1,defaultScale)];
+        var rot=[point(0,[0]),point(1,[0])];
+        var opacity=[point(0,[100]),point(1,[100])];
+        var intensity=s.intensity;
+        var makeScale=function(n){return [fit*n,fit*n,100];};
+        var makePos=function(dx,dy){return [center[0]+dx,center[1]+dy,0];};
+        if(preset==='spin'){
+          rot=[point(0,[0],'ramp'),point(1,[360*s.turns*s.direction])];
+        }else if(preset==='float'){
+          pos=[point(0,center,'soft'),point(0.5,makePos(0,-s.h*0.13*intensity),'smooth'),point(1,center)];
+        }else if(preset==='pulse'){
+          scale=[point(0,defaultScale,'smooth'),point(0.5,makeScale(1+0.24*intensity),'smooth'),point(1,defaultScale)];
+        }else if(preset==='sway'){
+          rot=[point(0,[0],'smooth'),point(0.3,[-19*intensity],'smooth'),point(0.7,[19*intensity],'smooth'),point(1,[0])];
+        }else if(preset==='bounce'){
+          pos=[point(0,center,'out'),point(0.36,makePos(0,-s.h*0.2*intensity),'in'),point(0.68,center,'out'),point(0.84,makePos(0,-s.h*0.045*intensity),'in'),point(1,center)];
+          scale=[point(0,defaultScale,'smooth'),point(0.68,makeScale(1-0.08*intensity),'out'),point(0.86,makeScale(1+0.025*intensity),'smooth'),point(1,defaultScale)];
+        }else if(preset==='slide'){
+          pos=[point(0,center,'smooth'),point(0.5,makePos(s.w*0.15*intensity,0),'smooth'),point(1,center)];
+        }else if(preset==='fade'){
+          opacity=[point(0,[100],'smooth'),point(0.5,[Math.max(4,100-78*intensity)],'smooth'),point(1,[100])];
+        }else if(preset==='pop'){
+          scale=[point(0,defaultScale,'in'),point(0.24,makeScale(Math.max(0.45,1-0.18*intensity)),'out'),point(0.64,makeScale(1+0.28*intensity),'smooth'),point(1,defaultScale)];
+        }
+        return {
+          s:s, beforeFrames:beforeFrames, motionFrames:motionFrames, afterFrames:afterFrames,
+          totalFrames:Math.max(1,totalFrames), duration:totalFrames/s.fps,
+          tracks:{
+            p:trackFrames(pos,beforeFrames,motionFrames),
+            s:trackFrames(scale,beforeFrames,motionFrames),
+            r:trackFrames(rot,beforeFrames,motionFrames),
+            o:trackFrames(opacity,beforeFrames,motionFrames)
+          }
+        };
+      }
+      function cubicCoordinate(t,p1,p2){
+        var inv=1-t;
+        return 3*inv*inv*t*p1+3*inv*t*t*p2+t*t*t;
+      }
+      function eased(percent,curveName){
+        if(percent<=0)return 0;
+        if(percent>=1)return 1;
+        var b=curves[curveName]||curves.smooth;
+        var lo=0,hi=1,t=0.5;
+        for(var i=0;i<20;i++){
+          t=(lo+hi)/2;
+          if(cubicCoordinate(t,b[0],b[2])<percent)lo=t;else hi=t;
+        }
+        return cubicCoordinate(t,b[1],b[3]);
+      }
+      function evaluate(track,frame){
+        if(frame<=track[0].t)return track[0].v;
+        for(var i=0;i<track.length-1;i++){
+          var first=track[i],second=track[i+1];
+          if(frame<=second.t){
+            if(first.hold)return first.v;
+            var fraction=(frame-first.t)/(second.t-first.t);
+            var amount=eased(fraction,first.curve);
+            return first.v.map(function(v,j){return v+(second.v[j]-v)*amount;});
+          }
+        }
+        return track[track.length-1].v;
+      }
+      function paint(){
+        if(!model)return;
+        var s=model.s;
+        if(canvas.width!==s.w || canvas.height!==s.h){
+          canvas.width=s.w;canvas.height=s.h;
+        }
+        stage.style.aspectRatio=s.w+' / '+s.h;
+        context.clearRect(0,0,s.w,s.h);
+        if(asset){
+          var f=Math.min(elapsed* s.fps,model.totalFrames);
+          var pos=evaluate(model.tracks.p,f);
+          var sc=evaluate(model.tracks.s,f);
+          var rotation=evaluate(model.tracks.r,f)[0];
+          var alpha=evaluate(model.tracks.o,f)[0];
+          context.save();
+          context.globalAlpha=Math.max(0,Math.min(1,alpha/100));
+          context.translate(pos[0],pos[1]);
+          context.rotate(rotation*Math.PI/180);
+          context.scale(sc[0]/100,sc[1]/100);
+          context.drawImage(asset.image,-asset.w/2,-asset.h/2,asset.w,asset.h);
+          context.restore();
+        }
+        $('currentTime').textContent=elapsed.toFixed(2)+'s';
+        $('endTime').textContent=model.duration.toFixed(2)+'s';
+        $('scrubber').value=Math.min(Number($('scrubber').max),Math.round(elapsed*1000));
+      }
+      function updatePlayButton(){
+        $('playButton').textContent=playing?'❚❚ Pause':'▶ Play';
+      }
+      function stop(){
+        playing=false;
+        if(frameHandle!==null){cancelAnimationFrame(frameHandle);frameHandle=null;}
+        updatePlayButton();
+      }
+      function tick(now){
+        if(!playing)return;
+        elapsed=(now-startedAt)/1000;
+        if(elapsed>=model.duration){
+          if(model.duration>0){
+            elapsed=elapsed%model.duration;
+            if(!$('loopPreview').checked){elapsed=model.duration;stop();}
+          }else{elapsed=0;stop();}
+        }
+        paint();
+        if(playing)frameHandle=requestAnimationFrame(tick);
+      }
+      function togglePlay(){
+        if(!asset)return;
+        if(playing){stop();return;}
+        if(elapsed>=model.duration)elapsed=0;
+        playing=true;startedAt=performance.now()-elapsed*1000;
+        updatePlayButton();frameHandle=requestAnimationFrame(tick);
+      }
+      function refresh(){
+        stop();
+        model=buildModel();
+        elapsed=0;
+        $('totalDuration').textContent=model.duration.toFixed(2)+' s total';
+        $('scrubber').max=Math.round(model.duration*1000);
+        $('rotationsValue').textContent=String(model.s.turns);
+        $('intensityValue').textContent=Math.round(model.s.intensity*100)+'%';
+        $('presetDescription').textContent=descriptions[preset];
+        $('spinControls').hidden=preset!=='spin';
+        $('intensityControls').hidden=preset==='spin';
+        paint();
+      }
+      function setPreset(name){
+        if(!Object.prototype.hasOwnProperty.call(descriptions,name))return;
+        preset=name;
+        document.querySelectorAll('[data-preset]').forEach(function(button){
+          var active=button.dataset.preset===preset;
+          button.classList.toggle('active',active);
+          button.setAttribute('aria-pressed',String(active));
+        });
+        refresh();
+      }
+      function notify(message){
+        var toast=$('toast');
+        toast.textContent=message;toast.classList.add('show');
+        if(toastTimeout)clearTimeout(toastTimeout);
+        toastTimeout=setTimeout(function(){toast.classList.remove('show');},3100);
+      }
+      function safeName(name){
+        return String(name||'image').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,58)||'image';
+      }
+      function decodeImage(src){
+        return new Promise(function(resolve,reject){
+          var img=new Image();
+          img.onload=function(){resolve(img);};
+          img.onerror=function(){reject(new Error('This image could not be decoded.'));};
+          img.src=src;
+        });
+      }
+      async function loadDataUrl(dataURL,name,originalDimensions){
+        var image=await decodeImage(dataURL);
+        asset={image:image,dataURL:dataURL,w:image.naturalWidth,h:image.naturalHeight,name:name};
+        $('assetInfo').classList.add('visible');
+        $('assetName').textContent=name;
+        $('assetMeta').textContent=asset.w+' × '+asset.h+' px · embedded PNG'+(originalDimensions?' · resized':'');
+        $('placeholder').hidden=true;
+        $('exportButton').disabled=false;
+        $('playButton').disabled=false;
+        $('previewStatus').textContent='Ready to animate';
+        refresh();
+        notify('Artwork ready. Choose a motion and press Play.');
+      }
+      async function handleFile(file){
+        if(!file)return;
+        var accepted=['image/png','image/jpeg','image/webp'];
+        if(!accepted.includes(file.type)){
+          notify('Choose a PNG, JPG, or WebP image.');return;
+        }
+        if(file.size>25*1024*1024){
+          notify('Image must be 25 MB or smaller.');return;
+        }
+        var url=URL.createObjectURL(file);
+        try{
+          var input=await decodeImage(url);
+          if(!input.naturalWidth||!input.naturalHeight)throw new Error('Invalid image dimensions');
+          var limit=1600;
+          var ratio=Math.min(1,limit/Math.max(input.naturalWidth,input.naturalHeight));
+          var width=Math.max(1,Math.round(input.naturalWidth*ratio));
+          var height=Math.max(1,Math.round(input.naturalHeight*ratio));
+          var out=document.createElement('canvas');out.width=width;out.height=height;
+          var ctx=out.getContext('2d');
+          ctx.clearRect(0,0,width,height);
+          ctx.drawImage(input,0,0,width,height);
+          var png=out.toDataURL('image/png');
+          await loadDataUrl(png,file.name.replace(/\.[^.]+$/,'')+'.png',ratio<1);
+        }catch(error){
+          notify('Could not open image: '+(error.message||'unknown error'));
+        }finally{
+          URL.revokeObjectURL(url);
+          fileInput.value='';
+        }
+      }
+      async function demo(){
+        var c=document.createElement('canvas');c.width=480;c.height=480;
+        var x=c.getContext('2d');
+        x.translate(240,240);
+        var ring=x.createLinearGradient(-175,-170,185,175);
+        ring.addColorStop(0,'#80c2ff');ring.addColorStop(0.5,'#397ef2');ring.addColorStop(1,'#8ddfff');
+        x.lineWidth=24;x.strokeStyle=ring;x.beginPath();x.arc(0,0,166,0,2*Math.PI);x.stroke();
+        var fill=x.createLinearGradient(-90,-120,100,130);
+        fill.addColorStop(0,'#4da8ff');fill.addColorStop(1,'#2359d5');
+        x.fillStyle=fill;x.beginPath();x.roundRect(-121,-121,242,242,58);x.fill();
+        x.font='800 186px -apple-system, Segoe UI, sans-serif';x.fillStyle='white';x.textAlign='center';x.textBaseline='middle';x.fillText('A',0,14);
+        try{await loadDataUrl(c.toDataURL('image/png'),'demo-artwork.png',false);}
+        catch(e){notify('Demo artwork could not load.');}
+      }
+      function tangent(x,y,count){
+        return {x:Array(count).fill(x),y:Array(count).fill(y)};
+      }
+      function lottieProperty(track){
+        var constant=track.every(function(k){return k.v.every(function(v,j){return Math.abs(v-track[0].v[j])<0.00001;});});
+        var scalar=track[0].v.length===1;
+        if(constant)return {a:0,k:scalar?track[0].v[0]:track[0].v.slice()};
+        var keyframes=track.map(function(k){return {t:k.t,s:k.v.slice()};});
+        for(var i=0;i<track.length-1;i++){
+          var from=track[i],to=track[i+1],out=keyframes[i],next=keyframes[i+1];
+          if(from.hold){out.h=1;continue;}
+          var curve=curves[from.curve]||curves.smooth;
+          out.o=tangent(curve[0],curve[1],from.v.length);
+          next.i=tangent(curve[2],curve[3],from.v.length);
+          out.e=to.v.slice();
+        }
+        return {a:1,k:keyframes};
+      }
+      function buildLottie(){
+        if(!asset)throw new Error('Please add an image first.');
+        var m=model,s=m.s;
+        var lastMotionFrame=m.beforeFrames+m.motionFrames;
+        var frameCount=Math.max(m.totalFrames,lastMotionFrame+1);
+        return {
+          v:'5.9.6',
+          fr:s.fps,ip:0,op:frameCount,w:s.w,h:s.h,
+          nm:safeName(asset.name)+' - '+preset,
+          ddd:0,
+          assets:[{id:'image_0',w:asset.w,h:asset.h,u:'',p:asset.dataURL,e:1}],
+          layers:[{
+            ddd:0,ind:1,ty:2,nm:asset.name,refId:'image_0',sr:1,
+            ks:{
+              o:lottieProperty(m.tracks.o),
+              r:lottieProperty(m.tracks.r),
+              p:lottieProperty(m.tracks.p),
+              a:{a:0,k:[asset.w/2,asset.h/2,0]},
+              s:lottieProperty(m.tracks.s)
+            },
+            ao:0,ip:0,op:frameCount,st:0,bm:0
+          }],
+          markers:[],
+          meta:{g:'Lottie Animator (browser)',a:'',k:'',d:'Embedded transparent PNG with keyframed motion'}
+        };
+      }
+      function exportLottie(){
+        if(!asset)return;
+        try{
+          var content=JSON.stringify(buildLottie());
+          var blob=new Blob([content],{type:'application/json'});
+          var url=URL.createObjectURL(blob);
+          var a=document.createElement('a');
+          a.href=url;
+          a.download=safeName(asset.name)+'-'+preset+'.json';
+          document.body.appendChild(a);
+          a.click();a.remove();
+          setTimeout(function(){URL.revokeObjectURL(url);},10000);
+          notify('Lottie JSON exported, with your PNG embedded.');
+        }catch(err){notify('Export failed: '+(err.message||'unknown error'));}
+      }
+      $('presets').addEventListener('click',function(event){
+        var button=event.target.closest('[data-preset]');
+        if(button)setPreset(button.dataset.preset);
+      });
+      ['holdBefore','motionDuration','holdAfter','rotations','direction','intensity','canvasWidth','canvasHeight','fps','imageScale'].forEach(function(id){
+        $(id).addEventListener('input',refresh);
+        $(id).addEventListener('change',function(){
+          if($(id).type==='number'){
+            var bounds={
+              holdBefore:[2,0,20],motionDuration:[1.4,0.3,20],holdAfter:[1,0,20],
+              canvasWidth:[512,128,2048],canvasHeight:[512,128,2048]
+            }[id];
+            var validated=readNumber(id,bounds[0],bounds[1],bounds[2]);
+            $(id).value=id==='canvasWidth'||id==='canvasHeight'?Math.round(validated):validated;
+          }
+          refresh();
+        });
+      });
+      $('playButton').addEventListener('click',togglePlay);
+      $('exportButton').addEventListener('click',exportLottie);
+      $('demoButton').addEventListener('click',demo);
+      fileInput.addEventListener('change',function(){handleFile(fileInput.files&&fileInput.files[0]);});
+      uploadzone.addEventListener('keydown',function(e){
+        if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click();}
+      });
+      ['dragenter','dragover'].forEach(function(name){
+        uploadzone.addEventListener(name,function(e){e.preventDefault();uploadzone.classList.add('dragging');});
+      });
+      ['dragleave','drop'].forEach(function(name){
+        uploadzone.addEventListener(name,function(e){e.preventDefault();uploadzone.classList.remove('dragging');});
+      });
+      uploadzone.addEventListener('drop',function(e){handleFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]);});
+      $('scrubber').addEventListener('input',function(){
+        stop();elapsed=Number(this.value)/1000;paint();
+      });
+      document.addEventListener('visibilitychange',function(){if(document.hidden)stop();});
+      document.addEventListener('keydown',function(e){
+        if(e.code==='Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test((document.activeElement&&document.activeElement.tagName)||'')){
+          e.preventDefault();togglePlay();
+        }
+      });
+      // Preview loops by default; the exported Lottie keeps its complete static end hold.
+      var loopCheckbox=document.createElement('input');
+      loopCheckbox.type='checkbox';loopCheckbox.id='loopPreview';loopCheckbox.checked=true;
+      loopCheckbox.setAttribute('aria-label','Loop preview');
+      var label=document.createElement('label');label.className='live';label.style.cursor='pointer';label.style.marginLeft='auto';
+      label.appendChild(loopCheckbox);label.appendChild(document.createTextNode(' Loop'));
+      $('playButton').parentElement.insertBefore(label,$('playButton').nextSibling);
+      refresh();
+      // Expose pure export for browser-based acceptance tests; no global dependencies.
+      window.LottieAnimator={buildLottie:buildLottie,selectPreset:setPreset,settings:settings};
+    })();
+  </script>
+</body>
+</html>
