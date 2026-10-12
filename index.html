@@ -175,7 +175,8 @@
           <div class="field"><label for="fps">Frame rate</label><select class="select" id="fps"><option value="24">24 fps</option><option value="30">30 fps</option><option value="60" selected>60 fps</option></select></div>
           <div class="field"><label for="imageScale">Image size</label><select class="select" id="imageScale"><option value="0.6">Small</option><option value="0.76" selected>Balanced</option><option value="0.9">Large</option><option value="1">Full fit</option></select></div>
         </div>
-        <p class="info-note"><span aria-hidden="true">ⓘ</span><span>Export is standard Lottie <strong>.json</strong> with the PNG embedded. It keeps transparent pixels; the image stays raster, not vector. Looping is controlled by the player that opens the Lottie.</span></p>
+        <div class="control"><div class="control-label"><label for="exportFormat">File format</label></div><select class="select" id="exportFormat"><option value="json">Lottie JSON (.json)</option><option value="lottie">dotLottie package (.lottie)</option></select></div>
+        <p class="info-note"><span aria-hidden="true">ⓘ</span><span>Both formats preserve PNG transparency. JSON embeds the PNG; .lottie packages it in a compressed ZIP container. PNG artwork remains raster, not vector. Player settings control JSON looping; .lottie also saves your loop preference.</span></p>
       </section>
     </aside>
 
@@ -449,7 +450,8 @@
       async function handleFile(file){
         if(!file)return;
         var accepted=['image/png','image/jpeg','image/webp'];
-        if(!accepted.includes(file.type)){
+        var extension=/\.(png|jpe?g|webp)$/i.test(file.name||'');
+        if(!accepted.includes(file.type) && !(extension && (!file.type || file.type==='application/octet-stream'))){
           notify('Choose a PNG, JPG, or WebP image.');return;
         }
         if(file.size>25*1024*1024){
@@ -534,20 +536,84 @@
           meta:{g:'Lottie Animator (browser)',a:'',k:'',d:'Embedded transparent PNG with keyframed motion'}
         };
       }
-      function exportLottie(){
+      function makeCrcTable(){
+        var table=new Uint32Array(256);
+        for(var n=0;n<256;n++){
+          var c=n;
+          for(var k=0;k<8;k++)c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1);
+          table[n]=c>>>0;
+        }
+        return table;
+      }
+      var crcTable=makeCrcTable();
+      function crc32(bytes){
+        var crc=0xffffffff;
+        for(var i=0;i<bytes.length;i++)crc=(crc>>>8)^crcTable[(crc^bytes[i])&255];
+        return (crc^0xffffffff)>>>0;
+      }
+      // ZIP with the required raw DEFLATE method, entirely in the browser.
+      async function packageDotLottie(files){
+        if(typeof CompressionStream==='undefined'){
+          throw new Error('This browser cannot package .lottie files. Please export JSON instead.');
+        }
+        var encoder=new TextEncoder(), locals=[],central=[],offset=0,centralSize=0;
+        for(var index=0;index<files.length;index++){
+          var name=encoder.encode(files[index].name);
+          var data=encoder.encode(files[index].content);
+          var stream=new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+          var compressed=new Uint8Array(await new Response(stream).arrayBuffer());
+          var checksum=crc32(data);
+          var head=new Uint8Array(30+name.length),h=new DataView(head.buffer);
+          h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);
+          h.setUint16(8,8,true);h.setUint32(14,checksum,true);
+          h.setUint32(18,compressed.length,true);h.setUint32(22,data.length,true);
+          h.setUint16(26,name.length,true);head.set(name,30);
+          locals.push(head,compressed);
+          var record=new Uint8Array(46+name.length),r=new DataView(record.buffer);
+          r.setUint32(0,0x02014b50,true);r.setUint16(4,20,true);r.setUint16(6,20,true);
+          r.setUint16(8,0x0800,true);r.setUint16(10,8,true);r.setUint32(16,checksum,true);
+          r.setUint32(20,compressed.length,true);r.setUint32(24,data.length,true);
+          r.setUint16(28,name.length,true);r.setUint32(42,offset,true);
+          record.set(name,46);central.push(record);
+          centralSize+=record.length;offset+=head.length+compressed.length;
+        }
+        var end=new Uint8Array(22),e=new DataView(end.buffer);
+        e.setUint32(0,0x06054b50,true);
+        e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);
+        e.setUint32(12,centralSize,true);e.setUint32(16,offset,true);
+        return new Blob(locals.concat(central,[end]),{type:'application/zip+dotlottie'});
+      }
+      async function exportLottie(){
         if(!asset)return;
+        var button=$('exportButton');
+        button.disabled=true;
         try{
           var content=JSON.stringify(buildLottie());
-          var blob=new Blob([content],{type:'application/json'});
+          var format=$('exportFormat').value;
+          var blob;
+          if(format==='lottie'){
+            var manifest={
+              version:'1',generator:'Lottie Animator',
+              activeAnimationId:'main',
+              animations:[{id:'main',autoplay:true,loop:$('loopPreview').checked}]
+            };
+            blob=await packageDotLottie([
+              {name:'manifest.json',content:JSON.stringify(manifest)},
+              {name:'animations/main.json',content:content}
+            ]);
+          }else{
+            blob=new Blob([content],{type:'application/json'});
+          }
           var url=URL.createObjectURL(blob);
           var a=document.createElement('a');
           a.href=url;
-          a.download=safeName(asset.name)+'-'+preset+'.json';
+          a.download=safeName(asset.name)+'-'+preset+'.'+format;
           document.body.appendChild(a);
           a.click();a.remove();
           setTimeout(function(){URL.revokeObjectURL(url);},10000);
-          notify('Lottie JSON exported, with your PNG embedded.');
+          notify(format==='lottie'?'dotLottie package downloaded.':'Lottie JSON downloaded with your PNG embedded.');
         }catch(err){notify('Export failed: '+(err.message||'unknown error'));}
+        finally{button.disabled=!asset;}
       }
       $('presets').addEventListener('click',function(event){
         var button=event.target.closest('[data-preset]');
@@ -569,6 +635,9 @@
       });
       $('playButton').addEventListener('click',togglePlay);
       $('exportButton').addEventListener('click',exportLottie);
+      $('exportFormat').addEventListener('change',function(){
+        $('exportButton').setAttribute('aria-label','Download '+(this.value==='lottie'?'dotLottie package':'Lottie JSON'));
+      });
       $('demoButton').addEventListener('click',demo);
       fileInput.addEventListener('change',function(){handleFile(fileInput.files&&fileInput.files[0]);});
       uploadzone.addEventListener('keydown',function(e){
