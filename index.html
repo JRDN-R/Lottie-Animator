@@ -73,6 +73,21 @@
     .stage-wrap{display:flex;justify-content:center;align-items:center;min-height:320px;padding:25px;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#20334c70,transparent 60%)}
     .stage{position:relative;display:grid;place-items:center;width:min(100%,520px);max-height:min(62vh,600px);aspect-ratio:1/1;overflow:hidden;box-shadow:0 18px 55px #0007,0 0 0 1px #8d9fb324;background-color:#1e2938;background-image:linear-gradient(45deg,#2b3849 25%,transparent 25%),linear-gradient(-45deg,#2b3849 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2b3849 75%),linear-gradient(-45deg,transparent 75%,#2b3849 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}
     .stage canvas{display:block;width:100%;height:100%;object-fit:fill}
+    .stage.picking-pivot{cursor:crosshair}
+    .pivot-marker{position:absolute;z-index:2;width:22px;height:22px;transform:translate(-50%,-50%);border:2px solid #bfe1ff;border-radius:50%;background:#163b6788;box-shadow:0 0 0 2px #09172cbf,0 0 14px #6aa9ffbb;pointer-events:none}
+    .pivot-marker::before,.pivot-marker::after{content:"";position:absolute;left:50%;top:50%;background:#e3f1ff;transform:translate(-50%,-50%)}
+    .pivot-marker::before{width:14px;height:1px}.pivot-marker::after{width:1px;height:14px}
+    .pivot-tools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:13px}
+    .pivot-pick{border:1px solid #42638b;border-radius:9px;background:#203550;color:#cce2ff;min-height:36px;padding:0 12px;font-weight:650;font-size:12px}
+    .pivot-pick[aria-pressed="true"]{background:#31588a;border-color:#81b7ff}
+    .pivot-pick:disabled{opacity:.46;cursor:not-allowed}
+    .pivot-toggle{display:inline-flex;align-items:center;gap:7px;color:#c8d9ed;font-size:12px;cursor:pointer}
+    .pivot-toggle input{accent-color:#64a4ff}
+    .control-help{margin:10px 0 0;color:var(--muted);font-size:11px;line-height:1.55}
+    .phase-bar{display:flex;width:100%;height:7px;margin:1px 0 11px;overflow:hidden;border-radius:5px;background:#253750}
+    .phase-bar span{display:block;height:100%;transition:width .15s}
+    #phaseBeforeBar,#phaseAfterBar{background:#507199}
+    #phaseMotionBar{background:#6aa9ff}
     .stage-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center;pointer-events:none;background:#111e2a55}
     .placeholder-art{display:grid;place-items:center;width:92px;height:92px;border:2px solid #5688ba80;border-radius:24px;color:#a6d1ff;font-size:50px;background:#18324bcc;box-shadow:0 0 45px #559aff22}
     .stage-placeholder strong{margin-top:19px;font-size:16px}.stage-placeholder span{margin-top:8px;color:#b2c6df;font-size:12px}
@@ -128,9 +143,10 @@
       </section>
 
       <section class="side-section">
-        <div class="section-header"><h2 class="section-title">02 · Animation style</h2><span class="pill">8 presets</span></div>
+        <div class="section-header"><h2 class="section-title">02 · Animation style</h2><span class="pill">9 presets</span></div>
         <div class="preset-grid" id="presets" role="group" aria-label="Animation preset">
           <button class="preset active" type="button" data-preset="spin" aria-pressed="true"><span class="preset-icon" aria-hidden="true">↻</span><span class="preset-name">Speed-ramp spin</span></button>
+          <button class="preset" type="button" data-preset="continuous" aria-pressed="false"><span class="preset-icon" aria-hidden="true">⟳</span><span class="preset-name">Continuous spin</span></button>
           <button class="preset" type="button" data-preset="float" aria-pressed="false"><span class="preset-icon" aria-hidden="true">↕</span><span class="preset-name">Float</span></button>
           <button class="preset" type="button" data-preset="pulse" aria-pressed="false"><span class="preset-icon" aria-hidden="true">◎</span><span class="preset-name">Pulse</span></button>
           <button class="preset" type="button" data-preset="sway" aria-pressed="false"><span class="preset-icon" aria-hidden="true">⤺</span><span class="preset-name">Sway</span></button>
@@ -141,9 +157,14 @@
         </div>
         <p class="description" id="presetDescription">Starts still, accelerates through three full rotations, eases into a stop, then holds.</p>
         <div class="control" id="spinControls">
-          <div class="control-label"><label for="rotations">Full rotations</label><output id="rotationsValue">3</output></div>
+          <div class="control-label"><label for="rotations">Full rotations per cycle</label><output id="rotationsValue">3</output></div>
           <input type="range" id="rotations" min="1" max="8" step="1" value="3">
           <div class="control" style="margin-top:12px"><div class="control-label"><label for="direction">Direction</label></div><select class="select" id="direction"><option value="1">Clockwise ↻</option><option value="-1">Counterclockwise ↺</option></select></div>
+          <div id="rampControls">
+            <div class="control"><div class="control-label"><label for="acceleration">Speed up</label><output id="accelerationValue">30% of motion</output></div><input id="acceleration" type="range" min="10" max="45" step="5" value="30"></div>
+            <div class="control"><div class="control-label"><label for="deceleration">Slow down</label><output id="decelerationValue">30% of motion</output></div><input id="deceleration" type="range" min="10" max="45" step="5" value="30"></div>
+            <p class="control-help">The spin begins at rest, speeds up, runs at a steady peak speed, and slows to a complete stop.</p>
+          </div>
         </div>
         <div class="control" id="intensityControls" hidden>
           <div class="control-label"><label for="intensity">Intensity</label><output id="intensityValue">100%</output></div>
@@ -153,22 +174,34 @@
 
       <section class="side-section">
         <div class="section-header"><h2 class="section-title">03 · Timing</h2><span class="pill" id="totalDuration">4.40 s total</span></div>
-        <div class="control">
+        <div class="control" id="holdBeforeControl">
           <div class="control-label"><label for="holdBefore">Hold before</label><small>still at start</small></div>
           <div class="input-row"><input id="holdBefore" class="number" type="number" value="2" min="0" max="20" step="0.1"><span class="unit">sec</span></div>
         </div>
         <div class="control">
-          <div class="control-label"><label for="motionDuration">Animation duration</label><small>movement</small></div>
+          <div class="control-label"><label id="motionDurationLabel" for="motionDuration">Animation duration</label><small id="motionDurationHint">movement</small></div>
           <div class="input-row"><input id="motionDuration" class="number" type="number" value="1.4" min="0.3" max="20" step="0.1"><span class="unit">sec</span></div>
         </div>
-        <div class="control">
+        <div class="control" id="holdAfterControl">
           <div class="control-label"><label for="holdAfter">Hold after</label><small>still at end</small></div>
           <div class="input-row"><input id="holdAfter" class="number" type="number" value="1" min="0" max="20" step="0.1"><span class="unit">sec</span></div>
         </div>
       </section>
 
       <section class="side-section">
-        <div class="section-header"><h2 class="section-title">04 · Export settings</h2></div>
+        <div class="section-header"><h2 class="section-title">04 · Rotation center</h2><span class="pill">Pivot</span></div>
+        <div class="settings-grid">
+          <div class="field"><label for="pivotX">Pivot X (%)</label><input class="number" id="pivotX" type="number" min="0" max="100" step="0.1" value="50"></div>
+          <div class="field"><label for="pivotY">Pivot Y (%)</label><input class="number" id="pivotY" type="number" min="0" max="100" step="0.1" value="50"></div>
+        </div>
+        <div class="pivot-tools">
+          <button class="pivot-pick" id="pickPivotButton" type="button" aria-pressed="false" disabled>⊕ Pick on preview</button>
+          <label class="pivot-toggle" for="showPivot"><input id="showPivot" type="checkbox"> Show pivot guide</label>
+        </div>
+        <p class="control-help">50% / 50% is the image center. Shift the X/Y anchor, or pick a point on the image. Its resting position stays centered; the new anchor controls its rotation.</p>
+      </section>
+      <section class="side-section">
+        <div class="section-header"><h2 class="section-title">05 · Export settings</h2></div>
         <div class="settings-grid">
           <div class="field"><label for="canvasWidth">Width (px)</label><input class="number" id="canvasWidth" type="number" min="128" max="2048" step="1" value="512"></div>
           <div class="field"><label for="canvasHeight">Height (px)</label><input class="number" id="canvasHeight" type="number" min="128" max="2048" step="1" value="512"></div>
@@ -176,7 +209,7 @@
           <div class="field"><label for="imageScale">Image size</label><select class="select" id="imageScale"><option value="0.6">Small</option><option value="0.76" selected>Balanced</option><option value="0.9">Large</option><option value="1">Full fit</option></select></div>
         </div>
         <div class="control"><div class="control-label"><label for="exportFormat">File format</label></div><select class="select" id="exportFormat"><option value="json">Lottie JSON (.json)</option><option value="lottie">dotLottie package (.lottie)</option></select></div>
-        <p class="info-note"><span aria-hidden="true">ⓘ</span><span>Both formats preserve PNG transparency. JSON embeds the PNG; .lottie packages it in a compressed ZIP container. PNG artwork remains raster, not vector. Player settings control JSON looping; .lottie also saves your loop preference.</span></p>
+        <p class="info-note"><span aria-hidden="true">ⓘ</span><span>Both formats preserve PNG transparency and the pivot, holds, and speed changes. JSON looping is controlled by the player; .lottie also saves the loop preference. PNG artwork remains raster, not vector.</span></p>
       </section>
     </aside>
 
@@ -187,14 +220,16 @@
         <div class="stage-wrap">
           <div class="stage" id="stage">
             <canvas id="previewCanvas" width="512" height="512" role="img" aria-label="Transparent animation preview"></canvas>
+            <span class="pivot-marker" id="pivotMarker" hidden aria-hidden="true"></span>
             <div class="stage-placeholder" id="placeholder"><div class="placeholder-art" aria-hidden="true">✦</div><strong>Your animation starts here</strong><span>Upload an image or use the demo artwork</span></div>
           </div>
         </div>
-        <div class="stage-caption">The checkerboard is only a transparency guide. It will not appear in your exported Lottie.</div>
+        <div class="stage-caption">Checkerboard and pivot guide are preview-only; neither appears in the export.</div>
         <div class="timeline">
           <div class="timeline-top"><button class="playbtn" id="playButton" type="button" disabled>▶ Play</button><div class="timecode"><strong id="currentTime">0.00s</strong> / <span id="endTime">4.40s</span></div></div>
           <input id="scrubber" type="range" min="0" max="4400" value="0" step="1" aria-label="Scrub animation timeline">
-          <div class="ruler"><span class="phase"><i></i>Hold</span><span class="phase"><i></i>Motion</span><span class="phase"><i></i>Hold</span></div>
+          <div class="phase-bar" aria-hidden="true"><span id="phaseBeforeBar"></span><span id="phaseMotionBar"></span><span id="phaseAfterBar"></span></div>
+          <div class="ruler"><span class="phase"><i></i><span id="phaseBeforeText">Hold</span></span><span class="phase"><i></i><span id="phaseMotionText">Motion</span></span><span class="phase"><i></i><span id="phaseAfterText">Hold</span></span></div>
         </div>
       </section>
       <div class="details"><div><span aria-hidden="true">✳</span><span><b>No server uploads.</b> Everything happens in this browser.</span></div><div><span aria-hidden="true">◇</span><span>PNG transparency · keyframed motion · JSON export</span></div></div>
@@ -218,8 +253,10 @@
       var startedAt = 0;
       var frameHandle = null;
       var toastTimeout = null;
+      var pickingPivot = false;
       var descriptions = {
-        spin:'Starts still, accelerates through full rotations, eases into a stop, then holds.',
+        spin:'Holds completely still, speeds up, spins at full speed, slows to a stop, and holds again.',
+        continuous:'Spins at a constant speed with no pauses. Each full cycle loops seamlessly.',
         float:'Glides upward and gently settles back to the original position.',
         pulse:'Grows softly and shrinks back, like a single heartbeat.',
         sway:'Rotates to each side and settles gently in the center.',
@@ -229,6 +266,9 @@
         pop:'Squashes, springs outward, and settles at its original size.'
       };
       var curves = {
+        linear:[1/3,1/3,2/3,2/3],
+        accelerate:[1/3,0,2/3,1/3],
+        decelerate:[1/3,2/3,2/3,1],
         ramp:[0.72,0,0.28,1],
         smooth:[0.42,0,0.58,1],
         soft:[0.25,0.1,0.25,1],
@@ -251,12 +291,17 @@
           after:readNumber('holdAfter',1,0,20),
           turns:readNumber('rotations',3,1,8),
           direction:Number($('direction').value)===-1?-1:1,
+          acceleration:readNumber('acceleration',30,10,45)/100,
+          deceleration:readNumber('deceleration',30,10,45)/100,
+          pivotX:readNumber('pivotX',50,0,100),
+          pivotY:readNumber('pivotY',50,0,100),
           intensity:readNumber('intensity',100,20,200)/100,
           size:readNumber('imageScale',0.76,0.6,1)
         };
       }
-      function trackFrames(points,beforeFrames,motionFrames){
+      function trackFrames(points,beforeFrames,motionFrames,afterFrames){
         var frames = [];
+        // h:1 exports a true stationary interval before motion begins.
         if(beforeFrames>0) frames.push({t:0,v:points[0].v.slice(),hold:true});
         for(var i=0;i<points.length;i++){
           var frame = beforeFrames+Math.round(points[i].u*motionFrames);
@@ -266,16 +311,25 @@
             frames.push({t:frame,v:points[i].v.slice(),curve:points[i].curve});
           }
         }
+        // Explicitly keyframe the hold at the end so Lottie players preserve it.
+        if(afterFrames>0){
+          var last=frames[frames.length-1];
+          last.hold=true;
+          frames.push({t:beforeFrames+motionFrames+afterFrames,v:last.v.slice()});
+        }
         return frames;
       }
       function buildModel(){
         var s=settings();
-        var beforeFrames=Math.round(s.before*s.fps);
+        var beforeFrames=preset==='continuous'?0:Math.round(s.before*s.fps);
         var motionFrames=Math.max(1,Math.round(s.duration*s.fps));
-        var afterFrames=Math.round(s.after*s.fps);
+        var afterFrames=preset==='continuous'?0:Math.round(s.after*s.fps);
         var totalFrames=beforeFrames+motionFrames+afterFrames;
-        var center=[s.w/2,s.h/2,0];
         var fit=asset?Math.min(s.w/asset.w,s.h/asset.h)*s.size*100:100;
+        var anchor=asset?[asset.w*s.pivotX/100,asset.h*s.pivotY/100,0]:[0,0,0];
+        // Shift the layer position so the resting image stays centered with an off-center anchor.
+        var center=[s.w/2+(asset?(anchor[0]-asset.w/2)*fit/100:0),
+                    s.h/2+(asset?(anchor[1]-asset.h/2)*fit/100:0),0];
         var defaultScale=[fit,fit,100];
         var pos=[point(0,center),point(1,center)];
         var scale=[point(0,defaultScale),point(1,defaultScale)];
@@ -285,7 +339,20 @@
         var makeScale=function(n){return [fit*n,fit*n,100];};
         var makePos=function(dx,dy){return [center[0]+dx,center[1]+dy,0];};
         if(preset==='spin'){
-          rot=[point(0,[0],'ramp'),point(1,[360*s.turns*s.direction])];
+          // Trapezoidal angular velocity: acceleration, steady peak speed, deceleration.
+          // The quadratic Bezier curves match both our canvas preview and Lottie export.
+          var up=s.acceleration,down=s.deceleration;
+          var cruise=1-up-down;
+          var maxVelocity=1/(cruise+(up+down)/2);
+          var accelerationDistance=up*maxVelocity/2;
+          var decelerationStart=1-down*maxVelocity/2;
+          var fullRotation=360*s.turns*s.direction;
+          rot=[point(0,[0],'accelerate'),
+               point(up,[fullRotation*accelerationDistance],'linear'),
+               point(1-down,[fullRotation*decelerationStart],'decelerate'),
+               point(1,[fullRotation])];
+        }else if(preset==='continuous'){
+          rot=[point(0,[0],'linear'),point(1,[360*s.turns*s.direction])];
         }else if(preset==='float'){
           pos=[point(0,center,'soft'),point(0.5,makePos(0,-s.h*0.13*intensity),'smooth'),point(1,center)];
         }else if(preset==='pulse'){
@@ -306,10 +373,10 @@
           s:s, beforeFrames:beforeFrames, motionFrames:motionFrames, afterFrames:afterFrames,
           totalFrames:Math.max(1,totalFrames), duration:totalFrames/s.fps,
           tracks:{
-            p:trackFrames(pos,beforeFrames,motionFrames),
-            s:trackFrames(scale,beforeFrames,motionFrames),
-            r:trackFrames(rot,beforeFrames,motionFrames),
-            o:trackFrames(opacity,beforeFrames,motionFrames)
+            p:trackFrames(pos,beforeFrames,motionFrames,afterFrames),
+            s:trackFrames(scale,beforeFrames,motionFrames,afterFrames),
+            r:trackFrames(rot,beforeFrames,motionFrames,afterFrames),
+            o:trackFrames(opacity,beforeFrames,motionFrames,afterFrames)
           }
         };
       }
@@ -360,8 +427,16 @@
           context.translate(pos[0],pos[1]);
           context.rotate(rotation*Math.PI/180);
           context.scale(sc[0]/100,sc[1]/100);
-          context.drawImage(asset.image,-asset.w/2,-asset.h/2,asset.w,asset.h);
+          context.drawImage(asset.image,-asset.w*s.pivotX/100,-asset.h*s.pivotY/100,asset.w,asset.h);
           context.restore();
+          var marker=$('pivotMarker');
+          marker.hidden=!($('showPivot').checked||pickingPivot);
+          if(!marker.hidden){
+            marker.style.left=(pos[0]/s.w*100)+'%';
+            marker.style.top=(pos[1]/s.h*100)+'%';
+          }
+        }else{
+          $('pivotMarker').hidden=true;
         }
         $('currentTime').textContent=elapsed.toFixed(2)+'s';
         $('endTime').textContent=model.duration.toFixed(2)+'s';
@@ -389,22 +464,47 @@
       }
       function togglePlay(){
         if(!asset)return;
+        if(pickingPivot)setPickMode(false);
         if(playing){stop();return;}
         if(elapsed>=model.duration)elapsed=0;
         playing=true;startedAt=performance.now()-elapsed*1000;
         updatePlayButton();frameHandle=requestAnimationFrame(tick);
       }
+      function setPickMode(on){
+        pickingPivot=!!on && !!asset;
+        stage.classList.toggle('picking-pivot',pickingPivot);
+        $('pickPivotButton').setAttribute('aria-pressed',String(pickingPivot));
+        $('pickPivotButton').textContent=pickingPivot?'✕ Cancel pick':'⊕ Pick on preview';
+        if(pickingPivot){stop();elapsed=0;}
+        paint();
+      }
       function refresh(){
         stop();
         model=buildModel();
         elapsed=0;
-        $('totalDuration').textContent=model.duration.toFixed(2)+' s total';
-        $('scrubber').max=Math.round(model.duration*1000);
-        $('rotationsValue').textContent=String(model.s.turns);
-        $('intensityValue').textContent=Math.round(model.s.intensity*100)+'%';
+        var m=model,isContinuous=preset==='continuous',isSpin=preset==='spin';
+        $('totalDuration').textContent=m.duration.toFixed(2)+' s total';
+        $('scrubber').max=Math.round(m.duration*1000);
+        $('rotationsValue').textContent=String(m.s.turns);
+        $('accelerationValue').textContent=Math.round(m.s.acceleration*100)+'% of motion';
+        $('decelerationValue').textContent=Math.round(m.s.deceleration*100)+'% of motion';
+        $('intensityValue').textContent=Math.round(m.s.intensity*100)+'%';
         $('presetDescription').textContent=descriptions[preset];
-        $('spinControls').hidden=preset!=='spin';
-        $('intensityControls').hidden=preset==='spin';
+        $('spinControls').hidden=!(isSpin||isContinuous);
+        $('rampControls').hidden=!isSpin;
+        $('intensityControls').hidden=isSpin||isContinuous;
+        $('holdBeforeControl').hidden=isContinuous;
+        $('holdAfterControl').hidden=isContinuous;
+        $('motionDurationLabel').textContent=isContinuous?'Time per spin cycle':'Animation duration';
+        $('motionDurationHint').textContent=isContinuous?'constant speed':'movement';
+        $('phaseBeforeText').textContent=isContinuous?'No pause':'Still '+(m.beforeFrames/m.s.fps).toFixed(1)+'s';
+        $('phaseMotionText').textContent=isContinuous?'Constant spin':'Spin / motion '+(m.motionFrames/m.s.fps).toFixed(1)+'s';
+        $('phaseAfterText').textContent=isContinuous?'Seamless loop':'Still '+(m.afterFrames/m.s.fps).toFixed(1)+'s';
+        $('phaseBeforeBar').style.width=(m.beforeFrames/m.totalFrames*100)+'%';
+        $('phaseMotionBar').style.width=(m.motionFrames/m.totalFrames*100)+'%';
+        $('phaseAfterBar').style.width=(m.afterFrames/m.totalFrames*100)+'%';
+        if(isContinuous)$('loopPreview').checked=true;
+        $('loopPreview').disabled=isContinuous;
         paint();
       }
       function setPreset(name){
@@ -443,6 +543,7 @@
         $('placeholder').hidden=true;
         $('exportButton').disabled=false;
         $('playButton').disabled=false;
+        $('pickPivotButton').disabled=false;
         $('previewStatus').textContent='Ready to animate';
         refresh();
         notify('Artwork ready. Choose a motion and press Play.');
@@ -514,7 +615,7 @@
         if(!asset)throw new Error('Please add an image first.');
         var m=model,s=m.s;
         var lastMotionFrame=m.beforeFrames+m.motionFrames;
-        var frameCount=Math.max(m.totalFrames,lastMotionFrame+1);
+        var frameCount=preset==='continuous'?m.totalFrames:Math.max(m.totalFrames,lastMotionFrame+1);
         return {
           v:'5.9.6',
           fr:s.fps,ip:0,op:frameCount,w:s.w,h:s.h,
@@ -527,7 +628,7 @@
               o:lottieProperty(m.tracks.o),
               r:lottieProperty(m.tracks.r),
               p:lottieProperty(m.tracks.p),
-              a:{a:0,k:[asset.w/2,asset.h/2,0]},
+              a:{a:0,k:[asset.w*s.pivotX/100,asset.h*s.pivotY/100,0]},
               s:lottieProperty(m.tracks.s)
             },
             ao:0,ip:0,op:frameCount,st:0,bm:0
@@ -619,19 +720,40 @@
         var button=event.target.closest('[data-preset]');
         if(button)setPreset(button.dataset.preset);
       });
-      ['holdBefore','motionDuration','holdAfter','rotations','direction','intensity','canvasWidth','canvasHeight','fps','imageScale'].forEach(function(id){
+      ['holdBefore','motionDuration','holdAfter','rotations','direction','acceleration','deceleration','pivotX','pivotY','intensity','canvasWidth','canvasHeight','fps','imageScale'].forEach(function(id){
         $(id).addEventListener('input',refresh);
         $(id).addEventListener('change',function(){
           if($(id).type==='number'){
             var bounds={
               holdBefore:[2,0,20],motionDuration:[1.4,0.3,20],holdAfter:[1,0,20],
-              canvasWidth:[512,128,2048],canvasHeight:[512,128,2048]
+              canvasWidth:[512,128,2048],canvasHeight:[512,128,2048],
+              pivotX:[50,0,100],pivotY:[50,0,100]
             }[id];
             var validated=readNumber(id,bounds[0],bounds[1],bounds[2]);
             $(id).value=id==='canvasWidth'||id==='canvasHeight'?Math.round(validated):validated;
           }
           refresh();
         });
+      });
+      $('showPivot').addEventListener('change',paint);
+      $('pickPivotButton').addEventListener('click',function(){setPickMode(!pickingPivot);});
+      stage.addEventListener('click',function(event){
+        if(!pickingPivot||!asset||!model)return;
+        var rect=canvas.getBoundingClientRect();
+        var x=(event.clientX-rect.left)*model.s.w/rect.width;
+        var y=(event.clientY-rect.top)*model.s.h/rect.height;
+        var pos=evaluate(model.tracks.p,0),sc=evaluate(model.tracks.s,0);
+        var px=asset.w*model.s.pivotX/100+(x-pos[0])/(sc[0]/100);
+        var py=asset.h*model.s.pivotY/100+(y-pos[1])/(sc[1]/100);
+        if(px<0||px>asset.w||py<0||py>asset.h){
+          notify('Pick a point inside the image.');return;
+        }
+        $('pivotX').value=(px/asset.w*100).toFixed(1);
+        $('pivotY').value=(py/asset.h*100).toFixed(1);
+        $('showPivot').checked=true;
+        setPickMode(false);
+        refresh();
+        notify('Pivot set. Rotation now follows that point.');
       });
       $('playButton').addEventListener('click',togglePlay);
       $('exportButton').addEventListener('click',exportLottie);
@@ -668,7 +790,7 @@
       $('playButton').parentElement.insertBefore(label,$('playButton').nextSibling);
       refresh();
       // Expose pure export for browser-based acceptance tests; no global dependencies.
-      window.LottieAnimator={buildLottie:buildLottie,selectPreset:setPreset,settings:settings};
+      window.LottieAnimator={buildLottie:buildLottie,buildModel:buildModel,selectPreset:setPreset,settings:settings};
     })();
   </script>
 </body>
